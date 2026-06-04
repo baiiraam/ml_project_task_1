@@ -9,5 +9,6 @@ dependencies = [
     "haystack-ai>=2.30.0",
     "ollama-haystack>=6.6.0",
     "qdrant-client>=1.18.0",
+    "qdrant-haystack>=10.3.0",
     "sentence-transformers>=5.5.1",
 ]

@@ -1793,6 +1793,19 @@ wheels = [
 ]
 
 [[package]]
+name = "qdrant-haystack"
+version = "10.3.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "haystack-ai" },
+    { name = "qdrant-client" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/8f/9f/e236a0064e6adeb0e260d444e71d3536446e9482a30765bd13d9d1c2b52e/qdrant_haystack-10.3.0.tar.gz", hash = "sha256:35ae8b37efc7efd2ef578a2ef41b21eb99a6825873f0c903b665a3c667bb9b5f", size = 40944 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/fc/79/bef633e81c6bb18c7cf43d929d2a9cc21f429ad73575e0e25cdc29869ead/qdrant_haystack-10.3.0-py3-none-any.whl", hash = "sha256:ac9b789796e08e9bf42e67be36127b8db932e0e6d288bbf78ee2869cdc06b7a3", size = 29701 },
+]
+
+[[package]]
 name = "referencing"
 version = "0.37.0"
 source = { registry = "https://pypi.org/simple" }
@@ -2230,6 +2243,7 @@ dependencies = [
     { name = "haystack-ai" },
     { name = "ollama-haystack" },
     { name = "qdrant-client" },
+    { name = "qdrant-haystack" },
     { name = "sentence-transformers" },
 ]
 
@@ -2239,6 +2253,7 @@ requires-dist = [
     { name = "haystack-ai", specifier = ">=2.30.0" },
     { name = "ollama-haystack", specifier = ">=6.6.0" },
     { name = "qdrant-client", specifier = ">=1.18.0" },
+    { name = "qdrant-haystack", specifier = ">=10.3.0" },
     { name = "sentence-transformers", specifier = ">=5.5.1" },
 ]
 
