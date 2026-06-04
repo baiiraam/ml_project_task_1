@@ -1,7 +1,6 @@
-```markdown
-# Task 1: RAG Pipeline with Kubernetes, HAProxy, and Haystack
+# RAG Pipeline with k8s, HAProxy, and Haystack
 
-## TL;DR
+## TLDR
 
 ```bash
 # Deploy everything
@@ -12,8 +11,8 @@ kubectl port-forward -n rag-system svc/qdrant 6333:6333 &
 cd haproxy && docker-compose up -d && cd ..
 kubectl exec -it -n rag-system deployment/ollama -- ollama pull tinyllama
 
-# Run the pipeline
-python rag_demo.py
+# Verify deployment and run pipeline
+./verify_task1.sh && python rag_demo.py
 ```
 
 ## What It Does
@@ -28,10 +27,10 @@ Deploys Qdrant (vector database) and Ollama (LLM) in Kubernetes, exposes Ollama 
 │   RAG Demo  │     │  :11434     │     │   ┌─────────────┐   │
 │  (Haystack) │     │ (localhost  │     │   │  Ollama     │   │
 └─────────────┘     │  only)      │     │   │  :32000     │   │
-      │            └─────────────┘     │   └─────────────┘   │
-      │                                │                     │
-      │ (port-forward)                 │   ┌─────────────┐   │
-      ▼                                │   │  Qdrant     │   │
+      │             └─────────────┘     │   └─────────────┘   │
+      │                                 │                     │
+      │ (port-forward)                  │   ┌─────────────┐   │
+      ▼                                 │   │  Qdrant     │   │
 ┌─────────────┐                         │   │  :6333      │   │
 │ localhost:  │                         │   └─────────────┘   │
 │ 6333        │                         └─────────────────────┘
@@ -40,13 +39,12 @@ Deploys Qdrant (vector database) and Ollama (LLM) in Kubernetes, exposes Ollama 
 
 ## Prerequisites
 
-| Tool | Version | Installation |
-|------|---------|--------------|
-| Docker Desktop | 4.25+ | docker.com |
-| Kind | 0.20+ | choco install kind |
-| kubectl | 1.27+ | choco install kubernetes-cli |
-| Python | 3.10+ | python.org |
-| uv | Latest | pip install uv |
+| Tool | Version | Check Command | Notes |
+|------|---------|---------------|-------|
+| Docker Desktop | 28.3.2+ | `docker --version` | Required to run containers |
+| Kind CLI | 0.31.0+ | `kind version` | Manages Kind clusters |
+| kubectl | 1.32.2+ | `kubectl version --client` | Kubernetes CLI |
+| Python | 3.12.9+ | `python --version` | Runs the RAG pipeline |
 
 ## Quick Start
 
@@ -62,10 +60,6 @@ kubectl cluster-info --context kind-rag-cluster
 ```bash
 kubectl apply -f qdrant.yaml
 kubectl apply -f ollama.yaml
-
-# Wait for pods to be ready
-kubectl wait --for=condition=ready pod -l app=qdrant -n rag-system --timeout=60s
-kubectl wait --for=condition=ready pod -l app=ollama -n rag-system --timeout=120s
 ```
 
 ### 3. Port-Forward Qdrant
@@ -155,20 +149,95 @@ A: The Hanging Gardens of Babylon were located in the ancient city of
 | Test HAProxy | `curl http://127.0.0.1:11434/api/tags` |
 | Test Qdrant | `curl http://localhost:6333/collections` |
 | Run pipeline | `python rag_demo.py` |
+| Run verification | `./verify_task1.sh` |
 
 ## Security Features
 
 | Component | Binding | External Access | Localhost Access |
 |-----------|---------|-----------------|------------------|
-| HAProxy | `127.0.0.1:11434` | ❌ Blocked | ✅ Allowed |
-| Ollama | NodePort:32000 | ❌ (kind only) | ✅ |
-| Qdrant | ClusterIP | ❌ | ✅ (via port-forward) |
+| HAProxy | `127.0.0.1:11434` | Blocked | Allowed |
+| Ollama | NodePort:32000 | (kind only) | Allowed |
+| Qdrant | ClusterIP | Not Allowed | via port-forward |
 
 HAProxy is bound to localhost only in `haproxy/docker-compose.yml`:
 
 ```yaml
 ports:
   - "127.0.0.1:11434:11434"  # localhost only!
+```
+
+## Verification
+
+Run the verification script to ensure all components are working correctly:
+
+```bash
+# Make the script executable
+chmod +x verify_task1.sh
+
+# Run verification
+./verify_task1.sh
+```
+
+### Expected Verification Output
+
+```
+==========================================
+Task 1 Bonus Requirements Verification
+==========================================
+
+1. Kubernetes (Kind) Cluster:
+✓ Kind cluster running
+
+2. Qdrant in cluster:
+✓ Qdrant pod running
+✓ Qdrant ClusterIP service
+
+3. Ollama in cluster with NodePort:
+✓ Ollama pod running
+✓ Ollama NodePort service
+
+4. HAProxy on host:
+✓ HAProxy container running
+
+5. HAProxy localhost-only binding:
+✓ HAProxy bound to 127.0.0.1 only
+
+6. Ollama reachable via HAProxy:
+✓ Ollama accessible via HAProxy
+
+7. Qdrant collection exists:
+✓ Qdrant collection 'seven_wonders' exists
+
+8. Documents indexed in Qdrant:
+✓ 151 documents indexed in Qdrant
+
+9. Haystack pipeline test:
+✓ Haystack Qdrant integration works
+
+10. End-to-end RAG test:
+✓ End-to-end RAG works (retrieval + generation)
+
+==========================================
+Verification Complete
+==========================================
+```
+
+The script checks all 10 bonus task requirements and provides a clear pass/fail status for each.
+
+## File Structure
+
+```
+task-1/
+├── kind-config.yaml       # Kind cluster with port mappings
+├── qdrant.yaml            # Qdrant deployment + PVC + ClusterIP
+├── ollama.yaml            # Ollama deployment + PVC + NodePort
+├── rag_demo.py            # Haystack RAG pipeline
+├── verify_task1.sh        # 10-point verification script
+├── requirements.txt       # Python dependencies
+├── haproxy/
+│   ├── docker-compose.yml # HAProxy container config
+│   └── haproxy.cfg        # HAProxy routing rules
+└── README.md              # This file
 ```
 
 ## Troubleshooting
@@ -220,21 +289,6 @@ curl -L -o kind.exe https://kind.sigs.k8s.io/dl/v0.31.0/kind-windows-amd64
 export PATH="$HOME:$PATH"
 ```
 
-## File Structure
-
-```
-task-1/
-├── kind-config.yaml       # Kind cluster with port mappings
-├── qdrant.yaml            # Qdrant deployment + PVC + ClusterIP
-├── ollama.yaml            # Ollama deployment + PVC + NodePort
-├── rag_demo.py            # Haystack RAG pipeline
-├── requirements.txt       # Python dependencies
-├── haproxy/
-│   ├── docker-compose.yml # HAProxy container config
-│   └── haproxy.cfg        # HAProxy routing rules
-└── README.md              # This file
-```
-
 ## Cleaning Up
 
 ```bash
@@ -248,26 +302,4 @@ kubectl delete namespace rag-system
 kind delete cluster --name rag-cluster
 
 # Stop port-forward (press Ctrl+C in that terminal)
-```
-
-## Requirements Met (Bonus Task)
-
-- [x] Single-node Kubernetes cluster using kind
-- [x] Qdrant deployed inside cluster with PVC
-- [x] Ollama deployed inside cluster with NodePort (32000)
-- [x] HAProxy on host machine listening on 127.0.0.1:11434 only
-- [x] HAProxy forwards to Ollama NodePort
-- [x] Haystack uses Qdrant as vector store
-- [x] Haystack uses HAProxy endpoint for Ollama
-- [x] Documents embedded and stored in Qdrant (151 documents)
-- [x] Document retrieval works from Qdrant
-- [x] Answer generation works via Ollama through HAProxy
-
-## License
-
-MIT
-
-## Author
-
-MLOps Intern - Task 1 Completion
 ```
