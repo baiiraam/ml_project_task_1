@@ -4,7 +4,7 @@
 import json
 import requests
 from datasets import load_dataset
-from typing import Dict, Any, List
+from typing import List
 
 from haystack import Pipeline, component
 from haystack.dataclasses import Document
@@ -185,7 +185,7 @@ for question in test_questions:
 
         # The retriever results are already in the prompt_builder
         # To show retrieval stats, we can print a message
-        print(f"   ✓ Answer generated successfully")
+        print("   ✓ Answer generated successfully")
 
     except Exception as e:
         print(f"❌ Error: {e}")
