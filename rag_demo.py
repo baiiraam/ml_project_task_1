@@ -9,7 +9,10 @@ from typing import List
 from haystack import Pipeline, component
 from haystack.dataclasses import Document
 from haystack.components.builders import PromptBuilder
-from haystack.components.embedders import SentenceTransformersDocumentEmbedder, SentenceTransformersTextEmbedder
+from haystack.components.embedders import (
+    SentenceTransformersDocumentEmbedder,
+    SentenceTransformersTextEmbedder,
+)
 from haystack.components.writers import DocumentWriter
 
 # For Qdrant - correct imports
@@ -19,6 +22,7 @@ from haystack_integrations.components.retrievers.qdrant import QdrantEmbeddingRe
 print("=" * 60)
 print("Haystack RAG Pipeline with Qdrant + Ollama via HAProxy")
 print("=" * 60)
+
 
 # Function to check/pull Ollama model
 def ensure_ollama_model(model_name="tinyllama"):
@@ -40,7 +44,7 @@ def ensure_ollama_model(model_name="tinyllama"):
             "http://127.0.0.1:11434/api/pull",
             json={"name": model_name},
             stream=True,
-            timeout=300
+            timeout=300,
         )
         resp.raise_for_status()
 
@@ -57,6 +61,7 @@ def ensure_ollama_model(model_name="tinyllama"):
         print(f"   ✗ Error: {e}")
         return False
 
+
 # 1. Initialize Qdrant Document Store
 print("\n1. Connecting to Qdrant Document Store...")
 document_store = QdrantDocumentStore(
@@ -64,7 +69,7 @@ document_store = QdrantDocumentStore(
     port=6333,
     index="seven_wonders",
     embedding_dim=384,
-    recreate_index=True
+    recreate_index=True,
 )
 print("   ✓ Connected to Qdrant")
 
@@ -79,7 +84,9 @@ print("\n3. Indexing documents with embeddings...")
 indexing_pipeline = Pipeline()
 indexing_pipeline.add_component(
     "embedder",
-    SentenceTransformersDocumentEmbedder(model="sentence-transformers/all-MiniLM-L6-v2")
+    SentenceTransformersDocumentEmbedder(
+        model="sentence-transformers/all-MiniLM-L6-v2"
+    ),
 )
 indexing_pipeline.add_component("writer", DocumentWriter(document_store=document_store))
 indexing_pipeline.connect("embedder.documents", "writer.documents")
@@ -90,6 +97,7 @@ print("   ✓ Indexing complete")
 if not ensure_ollama_model("tinyllama"):
     print("Failed to ensure model is available. Exiting.")
     exit(1)
+
 
 # 5. Create a Haystack component for Ollama
 @component
@@ -103,17 +111,11 @@ class OllamaGenerator:
     @component.output_types(replies=List[str])
     def run(self, prompt: str):
         """Generate response from Ollama."""
-        payload = {
-            "model": self.model,
-            "prompt": prompt,
-            "stream": False
-        }
+        payload = {"model": self.model, "prompt": prompt, "stream": False}
 
         try:
             response = requests.post(
-                f"{self.url}/api/generate",
-                json=payload,
-                timeout=120
+                f"{self.url}/api/generate", json=payload, timeout=120
             )
 
             if response.status_code == 200:
@@ -125,6 +127,7 @@ class OllamaGenerator:
             answer = f"Exception: {str(e)}"
 
         return {"replies": [answer]}
+
 
 # 6. Build the Prompt Template
 prompt_template = """
@@ -144,14 +147,17 @@ print("\n4. Building Haystack RAG Pipeline...")
 rag_pipeline = Pipeline()
 
 # Add components
-rag_pipeline.add_component("text_embedder",
-    SentenceTransformersTextEmbedder(model="sentence-transformers/all-MiniLM-L6-v2"))
-rag_pipeline.add_component("retriever",
-    QdrantEmbeddingRetriever(document_store=document_store, top_k=2))
-rag_pipeline.add_component("prompt_builder",
-    PromptBuilder(template=prompt_template))
-rag_pipeline.add_component("llm",
-    OllamaGenerator(model="tinyllama", url="http://127.0.0.1:11434"))
+rag_pipeline.add_component(
+    "text_embedder",
+    SentenceTransformersTextEmbedder(model="sentence-transformers/all-MiniLM-L6-v2"),
+)
+rag_pipeline.add_component(
+    "retriever", QdrantEmbeddingRetriever(document_store=document_store, top_k=2)
+)
+rag_pipeline.add_component("prompt_builder", PromptBuilder(template=prompt_template))
+rag_pipeline.add_component(
+    "llm", OllamaGenerator(model="tinyllama", url="http://127.0.0.1:11434")
+)
 
 # Connect components
 rag_pipeline.connect("text_embedder.embedding", "retriever.query_embedding")
@@ -174,10 +180,12 @@ for question in test_questions:
     print("   Running pipeline...")
 
     try:
-        results = rag_pipeline.run({
-            "text_embedder": {"text": question},
-            "prompt_builder": {"query": question},
-        })
+        results = rag_pipeline.run(
+            {
+                "text_embedder": {"text": question},
+                "prompt_builder": {"query": question},
+            }
+        )
 
         # FIXED: Access results correctly
         answer = results["llm"]["replies"][0]
@@ -190,6 +198,7 @@ for question in test_questions:
     except Exception as e:
         print(f"❌ Error: {e}")
         import traceback
+
         traceback.print_exc()
 
     print("-" * 40)
